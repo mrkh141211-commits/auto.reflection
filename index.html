@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIヒントン - べんきょうのあいぼう</title>
+<link href="https://fonts.googleapis.com/css2?family=Reggae+One&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/* ==================================================
+   ★★★ 先生の設定 (index.html内のscript冒頭にもあります) ★★★
+   ================================================== */
+:root{
+  --red:#e60012; --yellow:#ffd800; --green:#2fa84f; --ink:#1a1a1a;
+  --paper:#fffdf5;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:'M PLUS Rounded 1c',sans-serif; color:var(--ink); min-height:100dvh;
+  /* ビックリマン風ホロチェック背景 */
+  background:
+    repeating-linear-gradient(45deg, rgba(255,120,200,.14) 0 60px, rgba(120,200,255,.14) 60px 120px, rgba(160,255,180,.14) 120px 180px, rgba(255,240,140,.14) 180px 240px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,.5) 0 60px, rgba(240,240,255,.4) 60px 120px),
+    linear-gradient(135deg,#fdf6ff,#eefaff 50%,#f3fff0);
+  background-attachment:fixed;
+}
+.wrap{max-width:520px;margin:0 auto;padding:16px;min-height:100dvh;display:flex;flex-direction:column}
+.hidden{display:none!important}
+
+/* シール風の共通パーツ */
+.sticker{background:var(--paper);border:3px solid var(--ink);border-radius:20px;box-shadow:5px 6px 0 rgba(0,0,0,.85)}
+.title{
+  font-family:'Reggae One',cursive; color:var(--red); text-align:center;
+  font-size:clamp(34px,9vw,46px); letter-spacing:.02em; line-height:1.15;
+  -webkit-text-stroke:2px var(--ink); paint-order:stroke fill;
+  text-shadow:3px 3px 0 var(--ink);
+  transform:rotate(-2deg); margin:8px 0 2px;
+}
+.subtitle{text-align:center;font-weight:800;font-size:14px;background:var(--ink);color:var(--yellow);
+  display:inline-block;padding:4px 14px;border-radius:999px;margin:6px auto 0}
+.center{text-align:center}
+button{font-family:inherit;cursor:pointer}
+.btn{
+  display:block;width:100%;border:3px solid var(--ink);border-radius:18px;
+  font-weight:800;font-size:20px;padding:16px;box-shadow:4px 5px 0 rgba(0,0,0,.85);
+  transition:transform .08s;
+}
+.btn:active{transform:translate(3px,4px);box-shadow:1px 1px 0 rgba(0,0,0,.85)}
+.btn-red{background:var(--red);color:#fff}
+.btn-yellow{background:var(--yellow);color:var(--ink)}
+
+/* ---------- ログイン画面 ---------- */
+#loginScreen .hero{width:min(78%,340px);max-height:34vh;object-fit:contain;display:block;margin:4px auto 0;filter:drop-shadow(0 6px 0 rgba(0,0,0,.15))}
+.numgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0}
+.numgrid button{
+  aspect-ratio:1;border:3px solid var(--ink);border-radius:14px;background:#fff;
+  font-size:20px;font-weight:800;box-shadow:3px 3px 0 rgba(0,0,0,.8);
+}
+.numgrid button.sel{background:var(--red);color:#fff;transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(0,0,0,.8)}
+label.small{font-weight:800;font-size:15px;display:block;margin:12px 0 6px}
+input[type=password],textarea{
+  width:100%;border:3px solid var(--ink);border-radius:14px;padding:12px;font-size:18px;
+  font-family:inherit;background:#fff;
+}
+.card{padding:18px;margin-top:14px}
+
+/* ---------- やくそくモーダル ---------- */
+.modalbg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal{max-width:440px;width:100%;padding:20px}
+.modal h2{font-family:'Reggae One',cursive;color:var(--red);-webkit-text-stroke:1.5px var(--ink);paint-order:stroke fill;font-size:28px;text-align:center}
+.promise{display:flex;gap:10px;align-items:flex-start;margin:12px 0;font-weight:700;font-size:16px;line-height:1.5}
+.promise .n{flex:none;width:34px;height:34px;border:3px solid var(--ink);border-radius:50%;background:var(--yellow);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
+
+/* ---------- モードえらび ---------- */
+.modecard{display:flex;align-items:center;gap:14px;padding:18px;margin-top:16px;text-align:left;width:100%}
+.modecard .emoji{font-size:44px;flex:none}
+.modecard b{font-size:22px;display:block}
+.modecard span{font-size:13px;font-weight:700;color:#555}
+.modecard.hint{background:#fff}
+.modecard.saku{background:#fff}
+
+/* ---------- チャット ---------- */
+#chatScreen{display:flex;flex-direction:column;height:100dvh;max-width:520px;margin:0 auto;padding:10px 12px}
+.chathead{display:flex;align-items:center;gap:10px;padding:8px 12px}
+.chathead img{width:48px;height:48px;border-radius:50%;border:3px solid var(--ink);background:#fff;object-fit:contain;padding:3px}
+.chathead .name{font-family:'Reggae One',cursive;font-size:19px;color:var(--red);-webkit-text-stroke:1px var(--ink);paint-order:stroke fill}
+.badge{font-size:11px;font-weight:800;background:var(--ink);color:var(--yellow);border-radius:999px;padding:2px 8px}
+.remain{margin-left:auto;font-size:12px;font-weight:800;background:var(--green);color:#fff;border:2px solid var(--ink);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.backbtn{border:2px solid var(--ink);background:#fff;border-radius:10px;font-weight:800;padding:4px 8px;font-size:13px;box-shadow:2px 2px 0 rgba(0,0,0,.8)}
+#msgs{flex:1;overflow-y:auto;padding:12px 2px;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:8px;align-items:flex-end}
+.row.me{flex-direction:row-reverse}
+.row img{width:38px;height:38px;border-radius:50%;border:2.5px solid var(--ink);background:#fff;flex:none;object-fit:contain;padding:2px}
+.bubble{
+  max-width:78%;padding:11px 14px;border:3px solid var(--ink);border-radius:18px;
+  font-size:16px;font-weight:700;line-height:1.65;white-space:pre-wrap;word-break:break-word;
+  box-shadow:3px 4px 0 rgba(0,0,0,.8);
+}
+.row.ai .bubble{background:#fff;border-bottom-left-radius:4px}
+.row.me .bubble{background:var(--yellow);border-bottom-right-radius:4px}
+.typing{display:inline-block}
+.typing i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ink);margin:0 2px;animation:b .9s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.inputbar{display:flex;gap:8px;padding:8px 0 4px;align-items:flex-end}
+.inputbar textarea{flex:1;font-size:17px;font-weight:700;resize:none;max-height:150px;border-radius:16px}
+.sendbtn{flex:none;width:58px;height:58px;border:3px solid var(--ink);border-radius:16px;background:var(--red);
+  color:#fff;font-size:24px;box-shadow:3px 4px 0 rgba(0,0,0,.85)}
+.sendbtn:active{transform:translate(2px,3px);box-shadow:0 0 0}
+.ai-note{text-align:center;font-size:11px;font-weight:800;color:#666;padding:4px 0 2px}
+@media (prefers-reduced-motion: reduce){ .typing i{animation:none} }
+</style>
+</head>
+<body>
+
+<!-- ============ ログイン ============ -->
+<div class="wrap" id="loginScreen">
+  <h1 class="title">AIヒントン</h1>
+  <div class="center"><span class="subtitle">べんきょうの あいぼう</span></div>
+  <img class="hero" id="heroImg" src="character.png" alt="ヒントン" onerror="this.style.display='none'">
+  <div class="sticker card">
+    <label class="small">① じぶんの しゅっせきばんごうを えらぼう</label>
+    <div class="numgrid" id="numgrid"></div>
+    <label class="small">② クラスの パスワードを いれよう</label>
+    <input type="password" id="passInput" placeholder="パスワード" autocomplete="off">
+    <div style="height:14px"></div>
+    <button class="btn btn-red" onclick="tryLogin()">スタート!</button>
+    <p id="loginErr" class="center" style="color:var(--red);font-weight:800;margin-top:8px"></p>
+  </div>
+  <p class="ai-note" style="margin-top:10px">これはAI(人工知能)のアプリです。会話は先生が確認します。</p>
+</div>
+
+<!-- ============ 3つのやくそく ============ -->
+<div class="modalbg hidden" id="rulesModal">
+  <div class="sticker modal">
+    <h2>3つの やくそく</h2>
+    <div class="promise"><div class="n">1</div><div>本名・じゅうしょ・電話ばんごうなど、<b>じぶんや友だちのひみつは書かない!</b></div></div>
+    <div class="promise"><div class="n">2</div><div>ヒントンは答えを教えないよ。<b>答えは じぶんの力で見つけよう!</b></div></div>
+    <div class="promise"><div class="n">3</div><div>ヒントンはAIだから、まちがえることもある。<b>こまったら先生に聞こう!</b></div></div>
+    <button class="btn btn-yellow" onclick="agreeRules()">やくそくする!</button>
+  </div>
+</div>
+
+<!-- ============ モードえらび ============ -->
+<div class="wrap hidden" id="modeScreen">
+  <h1 class="title" style="font-size:30px">なにを する?</h1>
+  <button class="sticker modecard hint" onclick="startChat('hint')">
+    <span class="emoji">🔍</span>
+    <span><b>べんきょうの ヒント</b><span>わからないもんだいの ヒントをもらおう</span></span>
+  </button>
+  <button class="sticker modecard saku" onclick="startChat('sakubun')">
+    <span class="emoji">✏️</span>
+    <span><b>さくぶん チェック</b><span>書いたさくぶんを 見てもらおう</span></span>
+  </button>
+  <div style="flex:1"></div>
+  <button class="backbtn" style="align-self:center;margin-bottom:8px" onclick="backToLogin()">🏠 さいしょにもどる</button>
+  <p class="ai-note">きみは <b id="whoami"></b> ばんで ログインちゅう</p>
+</div>
+
+<!-- ============ チャット ============ -->
+<div id="chatScreen" class="hidden">
+  <div class="sticker chathead">
+    <button class="backbtn" onclick="backToMode()">←もどる</button>
+    <button class="backbtn" onclick="backToLogin()">🏠</button>
+    <img src="avatar.png" alt="" onerror="this.src='character.png'">
+    <div>
+      <div class="name">ヒントン</div>
+      <span class="badge">AIだよ</span>
+    </div>
+    <span class="remain" id="remainBadge"></span>
+  </div>
+  <div id="msgs"></div>
+  <div class="inputbar">
+    <textarea id="chatInput" rows="1" placeholder="ここに かいてね"></textarea>
+    <button class="sendbtn" onclick="send()" id="sendBtn">➤</button>
+  </div>
+  <p class="ai-note">AIはまちがえることもあるよ。さいごは じぶんで たしかめよう!</p>
+</div>
+
+<script>
+/* ==================================================
+   ★★★ 先生の設定はここ ★★★
+   ================================================== */
+const WORKER_URL   = "https://ai-hinton2.mrk-h14-12-11.workers.dev"; // ←手順書の④で貼りかえ
+const NUM_STUDENTS = 40;           // ←人数(パスワードは先生用ダッシュボードで設定)
+/* ================================================== */
+
+let studentNo = null, mode = null, history = [], classPass = "";
+
+// 出席番号グリッド
+const grid = document.getElementById('numgrid');
+for (let i = 1; i <= NUM_STUDENTS; i++) {
+  const b = document.createElement('button');
+  b.textContent = i;
+  b.onclick = () => {
+    grid.querySelectorAll('button').forEach(x => x.classList.remove('sel'));
+    b.classList.add('sel'); studentNo = i;
+  };
+  grid.appendChild(b);
+}
+
+async function tryLogin() {
+  const err = document.getElementById('loginErr');
+  if (!studentNo) { err.textContent = 'ばんごうを えらんでね'; return; }
+  const pass = document.getElementById('passInput').value;
+  err.textContent = 'かくにん中…';
+  try {
+    const res = await fetch(WORKER_URL + '/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pass })
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      if (data.reason === 'term') { err.textContent = 'ことしの りようは おわりました。先生に きいてね。'; return; }
+      err.textContent = 'パスワードが ちがうよ'; return;
+    }
+  } catch (e) {
+    err.textContent = 'つながらないよ。先生に教えてね'; return;
+  }
+  classPass = pass;
+  err.textContent = '';
+  document.getElementById('rulesModal').classList.remove('hidden');
+}
+function agreeRules() {
+  document.getElementById('rulesModal').classList.add('hidden');
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('whoami').textContent = studentNo;
+  document.getElementById('modeScreen').classList.remove('hidden');
+}
+
+const GREET = {
+  hint: 'やあ!ぼくはAIのヒントン!⚡\nわからないもんだいを、ここに書いてみて。\n答えは教えないけど、きみが自分でとけるように、とっておきのヒントを出すぜ!',
+  sakubun: 'よっ!さくぶんチェックのじかんだ!✏️\n書いたさくぶんを、ここに ぜんぶ はりつけるか、うちこんでみて。\nいいところ、たーっぷり見つけるからな!'
+};
+
+function startChat(m) {
+  mode = m; history = [];
+  document.getElementById('modeScreen').classList.add('hidden');
+  document.getElementById('chatScreen').classList.remove('hidden');
+  document.getElementById('msgs').innerHTML = '';
+  document.getElementById('chatInput').placeholder =
+    m === 'sakubun' ? 'さくぶんを ここに はりつけてね' : 'もんだいや しつもんを かいてね';
+  addBubble('ai', GREET[m]);
+}
+function backToMode() {
+  document.getElementById('chatScreen').classList.add('hidden');
+  document.getElementById('modeScreen').classList.remove('hidden');
+}
+function backToLogin() {
+  // 会話・番号・パスワードをリセットして最初の画面へ(次の子に交代できる)
+  history = []; mode = null; studentNo = null; classPass = '';
+  document.getElementById('msgs').innerHTML = '';
+  document.getElementById('chatScreen').classList.add('hidden');
+  document.getElementById('modeScreen').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('passInput').value = '';
+  document.querySelectorAll('#numgrid button').forEach(x => x.classList.remove('sel'));
+  document.getElementById('remainBadge').textContent = '';
+  window.scrollTo(0, 0);
+}
+
+function addBubble(who, text) {
+  const msgs = document.getElementById('msgs');
+  const row = document.createElement('div');
+  row.className = 'row ' + (who === 'ai' ? 'ai' : 'me');
+  if (who === 'ai') {
+    const img = document.createElement('img');
+    img.src = 'avatar.png'; img.onerror = () => img.src = 'character.png';
+    row.appendChild(img);
+  }
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  if (text === '...') b.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+  else b.textContent = text;
+  row.appendChild(b);
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+  return b;
+}
+
+const ta = document.getElementById('chatInput');
+ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 150) + 'px'; });
+
+async function send() {
+  const text = ta.value.trim();
+  if (!text) return;
+  ta.value = ''; ta.style.height = 'auto';
+  addBubble('me', text);
+  history.push({ role: 'user', content: text });
+  const wait = addBubble('ai', '...');
+  document.getElementById('sendBtn').disabled = true;
+  try {
+    const res = await fetch(WORKER_URL + '/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentNo, mode, messages: history, pass: classPass })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    wait.textContent = data.reply;
+    history.push({ role: 'assistant', content: data.reply });
+    if (data.remaining !== undefined)
+      document.getElementById('remainBadge').textContent = 'あと' + data.remaining + '回';
+  } catch (e) {
+    wait.textContent = 'うまくつながらなかった…💦（エラー: ' + (e.message || e) + '）';
+  }
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('msgs').scrollTop = 1e9;
+}
+
+// ===== 隠し入口:トップのヒントンを1.5秒 長押しで先生用ページへ =====
+(function(){
+  const hero = document.getElementById('heroImg');
+  if (!hero) return;
+  let timer = null;
+  const start = () => { timer = setTimeout(() => { location.href = 'teacher.html'; }, 1500); };
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+  hero.addEventListener('mousedown', start);
+  hero.addEventListener('touchstart', start, { passive: true });
+  ['mouseup','mouseleave','touchend','touchcancel','touchmove'].forEach(ev =>
+    hero.addEventListener(ev, cancel));
+  hero.addEventListener('contextmenu', e => e.preventDefault()); // 長押しメニュー抑制
+  hero.style.webkitUserSelect = 'none'; hero.style.userSelect = 'none';
+  hero.draggable = false;
+})();
+</script>
+</body>
+</html>
