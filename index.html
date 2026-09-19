@@ -17,6 +17,11 @@
   .state { text-align:center; color:var(--ink-soft); padding:60px 20px; }
   .state .big { font-family:"Hiragino Mincho ProN","Yu Mincho",serif; font-size:19px; color:var(--ink); margin-bottom:8px; }
 
+  .gate { text-align:center; padding:70px 20px; }
+  .gate input { font-family:inherit; font-size:15px; padding:11px 16px; border:1px solid var(--line); border-radius:8px; width:220px; text-align:center; }
+  .gate input:focus { outline:none; border-color:var(--pine); box-shadow:inset 0 0 0 1px var(--pine); }
+  .gate .msg { color:#a4443a; font-size:13px; margin-top:10px; height:16px; }
+
   .topic { background:var(--paper-raised); border:1px solid var(--line); border-left:3px solid var(--line);
     border-radius:8px; padding:14px 16px; margin-bottom:12px; cursor:pointer; transition:.15s; }
   .topic:hover { border-color:#c3ccc7; }
@@ -72,7 +77,6 @@
   .count { flex:1; font-size:13.5px; color:var(--ink-soft); } .count b { color:var(--pine); }
   .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%) translateY(10px); background:var(--ink); color:#eef1ef; font-size:13.5px; padding:10px 18px; border-radius:999px; opacity:0; pointer-events:none; transition:.25s; }
   .toast.show { opacity:1; transform:translateX(-50%); }
-  .login { text-align:center; padding:80px 20px; }
 </style>
 </head>
 <body>
@@ -80,38 +84,40 @@
     <div class="eyebrow" id="dateLabel"></div>
     <h1>今日の種</h1>
 
-    <div id="login" class="login">
-      <p class="lede">はじめにログインしてください。</p>
-      <button class="go" id="loginBtn">Googleでログイン</button>
+    <!-- 合言葉ゲート -->
+    <div id="gate" class="gate">
+      <p class="lede">合言葉を入れてください。</p>
+      <input type="password" id="pass" placeholder="合言葉" autocomplete="off" />
+      <div class="msg" id="gateMsg"></div>
+      <div style="margin-top:14px;"><button class="go" id="enterBtn">入る</button></div>
     </div>
 
-    <div id="app" style="display:none;">
-      <div id="content"></div>
-    </div>
+    <div id="app" style="display:none;"><div id="content"></div></div>
   </div>
 
   <div class="bar" id="bar" style="display:none;">
-    <div class="bar-inner">
-      <div class="count" id="count"></div>
-      <button class="go" id="action" disabled></button>
-    </div>
+    <div class="bar-inner"><div class="count" id="count"></div><button class="go" id="action" disabled></button></div>
   </div>
   <div class="toast" id="toast"></div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, collection, query, where, orderBy, limit, getDocs, updateDoc }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  // ▼ 自分の Firebase 設定に置き換える（READMEの手順3参照）
+  // ── Firebase 接続情報（おのちゃんのプロジェクト） ──
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
+    apiKey: "AIzaSyBrj2xdJ0VlhF9rogTqJivNHizszKtl3CY",
+    authDomain: "auto-reflection-d652a.firebaseapp.com",
+    projectId: "auto-reflection-d652a",
+    storageBucket: "auto-reflection-d652a.firebasestorage.app",
+    messagingSenderId: "520626263754",
+    appId: "1:520626263754:web:fb74cedc22c025726c4633",
   };
+
+  // ── 合言葉（★ここをGitHub上で自分の言葉に書き換える。CHANGE_ME を消して好きな言葉に）──
+  const PASSCODE = "mrk.h14.12-11";
+
   const COLLECTION = "topicBatches";
   const RICH_COLOR = {
     "濃":{accent:"#234641",soft:"rgba(35,70,65,.13)"}, "中":{accent:"#5f7a58",soft:"rgba(95,122,88,.14)"},
@@ -119,18 +125,25 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
   const dbf = getFirestore(app);
   const $ = (id) => document.getElementById(id);
   $("dateLabel").textContent = new Date().toLocaleDateString("ja-JP",{year:"numeric",month:"long",day:"numeric",weekday:"long"});
 
-  $("loginBtn").onclick = () => signInWithPopup(auth, new GoogleAuthProvider()).catch((e)=>toast(e.message));
-  onAuthStateChanged(auth, (user) => {
-    if (user) { $("login").style.display="none"; $("app").style.display="block"; $("bar").style.display="block"; loadBatch(); }
-    else { $("login").style.display="block"; $("app").style.display="none"; $("bar").style.display="none"; }
-  });
+  // ── 合言葉チェック ──
+  $("enterBtn").onclick = tryEnter;
+  $("pass").addEventListener("keydown",(e)=>{ if(e.key==="Enter") tryEnter(); });
+  function tryEnter() {
+    if ($("pass").value === PASSCODE && PASSCODE !== "CHANGE_ME") {
+      $("gate").style.display="none"; $("app").style.display="block"; $("bar").style.display="block"; loadBatch();
+    } else if (PASSCODE === "CHANGE_ME") {
+      $("gateMsg").textContent = "合言葉が未設定です（コードのCHANGE_MEを書き換えてください）";
+    } else {
+      $("gateMsg").textContent = "合言葉がちがいます";
+      $("pass").value = "";
+    }
+  }
 
-  let current = null;   // 現在のバッチ {ref, data}
+  let current = null;
   const selected = new Set();
 
   async function latest(status) {
@@ -138,52 +151,34 @@
     const snap = await getDocs(q);
     return snap.empty ? null : { ref: snap.docs[0].ref, data: snap.docs[0].data() };
   }
-
   async function loadBatch() {
-    // 記事ができていればそれを、なければ選択待ちを表示
-    current = await latest("composed") || await latest("pending");
-    if (!current) return renderEmpty();
-    if (current.data.status === "composed") renderArticles();
-    else renderTopics();
+    try {
+      current = await latest("composed") || await latest("pending");
+      if (!current) return renderEmpty();
+      if (current.data.status === "composed") renderArticles(); else renderTopics();
+    } catch(e) { $("content").innerHTML = `<div class="state"><div class="big">読み込めませんでした</div><small>${esc(e.message)}</small></div>`; }
   }
-
   function renderEmpty() {
     $("content").innerHTML = `<div class="state"><div class="big">まだ種がありません</div>記録がたまると、ここに書けるテーマが並びます。</div>`;
-    $("count").textContent = ""; $("action").style.display="none";
+    $("count").textContent=""; $("action").style.display="none";
   }
-
-  // ── 選択画面 ──
   function renderTopics() {
     const topics = current.data.topics || [];
     let html = `<p class="lede">この数日の記録から、<b>${topics.length}本の種</b>が見つかりました。書きたいものを選んでください。</p>`;
-    topics.forEach((t) => {
-      html += `<div class="topic" data-id="${t.id}"><div class="t-head"><span class="rich ${t.richness}">${t.richness}</span><span class="title">${esc(t.title)}</span></div><p class="summary">${esc(t.summary)}</p></div>`;
-    });
+    topics.forEach((t)=>{ html += `<div class="topic" data-id="${t.id}"><div class="t-head"><span class="rich ${t.richness}">${t.richness}</span><span class="title">${esc(t.title)}</span></div><p class="summary">${esc(t.summary)}</p></div>`; });
     $("content").innerHTML = html;
-    document.querySelectorAll(".topic").forEach((el) => {
-      el.onclick = () => {
-        const id = Number(el.dataset.id);
-        if (selected.has(id)) { selected.delete(id); el.classList.remove("selected"); }
-        else { selected.add(id); el.classList.add("selected"); }
-        const n = selected.size;
-        $("count").innerHTML = n ? `<b>${n}本</b>を選択中` : "まだ選んでいません";
-        $("action").disabled = n===0; $("action").textContent = n ? `選んだ${n}本を書く` : "選んで書く";
-      };
-    });
-    $("count").innerHTML = "まだ選んでいません";
-    $("action").style.display=""; $("action").disabled=true; $("action").textContent="選んで書く";
-    $("action").onclick = async () => {
-      $("action").disabled = true;
-      await updateDoc(current.ref, { selectedIds:[...selected].sort((a,b)=>a-b), status:"selected" });
-      $("content").innerHTML = `<div class="state"><div class="big">送りました</div>記事ができたら、またこのページを開いてください（数十分後）。</div>`;
-      $("count").textContent=""; $("action").style.display="none";
-    };
+    document.querySelectorAll(".topic").forEach((el)=>{ el.onclick=()=>{ const id=Number(el.dataset.id);
+      if(selected.has(id)){selected.delete(id);el.classList.remove("selected");}else{selected.add(id);el.classList.add("selected");}
+      const n=selected.size; $("count").innerHTML=n?`<b>${n}本</b>を選択中`:"まだ選んでいません"; $("action").disabled=n===0; $("action").textContent=n?`選んだ${n}本を書く`:"選んで書く"; }; });
+    $("count").innerHTML="まだ選んでいません"; $("action").style.display=""; $("action").disabled=true; $("action").textContent="選んで書く";
+    $("action").onclick=async()=>{ $("action").disabled=true;
+      await updateDoc(current.ref,{selectedIds:[...selected].sort((a,b)=>a-b),status:"selected"});
+      $("content").innerHTML=`<div class="state"><div class="big">送りました</div>記事ができたら、またこのページを開いてください（数十分後）。</div>`;
+      $("count").textContent=""; $("action").style.display="none"; };
   }
-
-  // ── 記事プレビュー＆カード編集画面 ──
   function renderArticles() {
     const arts = current.data.articles || [];
-    if (!arts.length) return renderEmpty();
+    if(!arts.length) return renderEmpty();
     let html = `<p class="lede">個人名を消して、あなたの教育観と文体で記事にしました。読んで、カードを仕上げてください。</p>
       <div class="article-tabs" id="atabs"></div><div class="article" id="article"></div>
       <div class="ig-wrap"><div class="ig-label">Instagram / note に使うカード（言葉は直接タップして編集できます）</div>
@@ -200,60 +195,35 @@
       </div>
       <div class="ed-row" style="margin-top:16px;"><button class="ghost" id="copyBtn">note用の本文をコピー</button></div></div>`;
     $("content").innerHTML = html;
-
-    const tabs = $("atabs");
-    arts.forEach((a,i) => {
-      const b = document.createElement("button");
-      b.className = "atab"+(i===0?" active":""); b.textContent = a.title.slice(0,12)+(a.title.length>12?"…":"");
-      b.onclick = () => { showArticle(a); [...tabs.children].forEach(c=>c.classList.remove("active")); b.classList.add("active"); };
-      tabs.appendChild(b);
-    });
-    // スウォッチ
-    const sw = $("swatches");
-    ["濃","中","軽","藍"].forEach((k) => {
-      const s=document.createElement("div"); s.className="sw"; s.style.background=RICH_COLOR[k].accent; s.dataset.key=k;
-      s.onclick=()=>setColor(k); sw.appendChild(s);
-    });
-    // 入力連動
-    $("edText").addEventListener("input", ()=>setQuote($("edText").value));
-    $("igQuote").addEventListener("input", ()=>{ $("edText").value=$("igQuote").textContent; setQuote($("igQuote").textContent,true); });
-    $("edSig").addEventListener("input", ()=>$("igSig").textContent=$("edSig").value||" ");
+    const tabs=$("atabs");
+    arts.forEach((a,i)=>{ const b=document.createElement("button"); b.className="atab"+(i===0?" active":""); b.textContent=a.title.slice(0,12)+(a.title.length>12?"…":"");
+      b.onclick=()=>{showArticle(a);[...tabs.children].forEach(c=>c.classList.remove("active"));b.classList.add("active");}; tabs.appendChild(b); });
+    const sw=$("swatches"); ["濃","中","軽","藍"].forEach((k)=>{ const s=document.createElement("div"); s.className="sw"; s.style.background=RICH_COLOR[k].accent; s.dataset.key=k; s.onclick=()=>setColor(k); sw.appendChild(s); });
+    $("edText").addEventListener("input",()=>setQuote($("edText").value));
+    $("igQuote").addEventListener("input",()=>{$("edText").value=$("igQuote").textContent;setQuote($("igQuote").textContent,true);});
+    $("edSig").addEventListener("input",()=>$("igSig").textContent=$("edSig").value||" ");
     $("edLeaf").addEventListener("change",(e)=>$("igLeaf").classList.toggle("hidden",!e.target.checked));
-    $("copyBtn").onclick = () => { navigator.clipboard.writeText(activeArticle.markdown); toast("本文をコピーしました"); };
-
+    $("copyBtn").onclick=()=>{navigator.clipboard.writeText(activeArticle.markdown);toast("本文をコピーしました");};
     showArticle(arts[0]);
-
-    $("count").textContent = "カードを仕上げて確定してください";
-    $("action").style.display=""; $("action").disabled=false; $("action").textContent="確定して投稿予約";
-    $("action").onclick = async () => {
-      $("action").disabled = true;
-      // 編集後のカード内容を保存（run-processが後で画像化・投稿）
-      const idx = arts.findIndex(a=>a===activeArticle);
-      arts[idx].card = { quote:$("igQuote").textContent, sig:$("edSig").value, rich:currentColor, leaf:$("edLeaf").checked };
-      await updateDoc(current.ref, { articles:arts, status:"ready" });
-      $("content").innerHTML = `<div class="state"><div class="big">仕上げました</div>note の下書き本文はコピー済みのものを貼り付け、公開ボタンを押してください。<br>カードは投稿予約されました。</div>`;
-      $("count").textContent=""; $("action").style.display="none";
-    };
+    $("count").textContent="カードを仕上げて確定してください"; $("action").style.display=""; $("action").disabled=false; $("action").textContent="確定して投稿予約";
+    $("action").onclick=async()=>{ $("action").disabled=true; const idx=arts.findIndex(a=>a===activeArticle);
+      arts[idx].card={quote:$("igQuote").textContent,sig:$("edSig").value,rich:currentColor,leaf:$("edLeaf").checked};
+      await updateDoc(current.ref,{articles:arts,status:"ready"});
+      $("content").innerHTML=`<div class="state"><div class="big">仕上げました</div>note本文はコピー済みのものを貼り付け、公開ボタンを押してください。<br>カードは投稿予約されました。</div>`;
+      $("count").textContent=""; $("action").style.display="none"; };
   }
-
-  let activeArticle=null, currentColor="濃";
-  function showArticle(a) {
-    activeArticle=a;
-    $("article").innerHTML = `<h2>${esc(a.title)}</h2>` + a.markdown.split("\n").slice(1).filter(Boolean).map(p=>`<p>${esc(p.replace(/^#+\s*/,""))}</p>`).join("");
-    setColor(a.rich||"濃");
-    const qp=$("qpList"); qp.innerHTML="";
+  let activeArticle=null,currentColor="濃";
+  function showArticle(a){ activeArticle=a;
+    $("article").innerHTML=`<h2>${esc(a.title)}</h2>`+a.markdown.split("\n").slice(1).filter(Boolean).map(p=>`<p>${esc(p.replace(/^#+\s*/,""))}</p>`).join("");
+    setColor(a.rich||"濃"); const qp=$("qpList"); qp.innerHTML="";
     (a.quotes||[]).forEach((q,i)=>{ const b=document.createElement("button"); b.className="qp"+(i===0?" active":""); b.textContent=q;
-      b.onclick=()=>{ $("edText").value=q; setQuote(q); [...qp.children].forEach(x=>x.classList.remove("active")); b.classList.add("active"); }; qp.appendChild(b); });
-    const first=(a.card&&a.card.quote)||(a.quotes&&a.quotes[0])||"";
-    $("edText").value=first; setQuote(first);
-    $("edSig").value=(a.card&&a.card.sig)||"日々のリフレクションより"; $("igSig").textContent=$("edSig").value;
-  }
-  function setQuote(q,noText){ const el=$("igQuote"); if(!noText) el.textContent=q; const n=(q||"").length;
-    el.style.fontSize = n<=12?"26px":n<=22?"21px":n<=34?"18px":"16px"; }
+      b.onclick=()=>{$("edText").value=q;setQuote(q);[...qp.children].forEach(x=>x.classList.remove("active"));b.classList.add("active");}; qp.appendChild(b); });
+    const first=(a.card&&a.card.quote)||(a.quotes&&a.quotes[0])||""; $("edText").value=first; setQuote(first);
+    $("edSig").value=(a.card&&a.card.sig)||"日々のリフレクションより"; $("igSig").textContent=$("edSig").value; }
+  function setQuote(q,noText){ const el=$("igQuote"); if(!noText) el.textContent=q; const n=(q||"").length; el.style.fontSize=n<=12?"26px":n<=22?"21px":n<=34?"18px":"16px"; }
   function setColor(k){ const c=RICH_COLOR[k]||RICH_COLOR["濃"]; currentColor=k; const card=$("igCard");
     card.style.setProperty("--accent",c.accent); card.style.setProperty("--accent-soft",c.soft);
     document.querySelectorAll(".sw").forEach(s=>s.classList.toggle("active",s.dataset.key===k)); }
-
   function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
   function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400);}
 </script>
