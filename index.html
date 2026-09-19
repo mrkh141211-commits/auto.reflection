@@ -1,327 +1,261 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AIヒントン - べんきょうのあいぼう</title>
-<link href="https://fonts.googleapis.com/css2?family=Reggae+One&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>今日の種 — リフレクション → note</title>
 <style>
-/* ==================================================
-   ★★★ 先生の設定 (index.html内のscript冒頭にもあります) ★★★
-   ================================================== */
-:root{
-  --red:#e60012; --yellow:#ffd800; --green:#2fa84f; --ink:#1a1a1a;
-  --paper:#fffdf5;
-}
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{
-  font-family:'M PLUS Rounded 1c',sans-serif; color:var(--ink); min-height:100dvh;
-  /* ビックリマン風ホロチェック背景 */
-  background:
-    repeating-linear-gradient(45deg, rgba(255,120,200,.14) 0 60px, rgba(120,200,255,.14) 60px 120px, rgba(160,255,180,.14) 120px 180px, rgba(255,240,140,.14) 180px 240px),
-    repeating-linear-gradient(-45deg, rgba(255,255,255,.5) 0 60px, rgba(240,240,255,.4) 60px 120px),
-    linear-gradient(135deg,#fdf6ff,#eefaff 50%,#f3fff0);
-  background-attachment:fixed;
-}
-.wrap{max-width:520px;margin:0 auto;padding:16px;min-height:100dvh;display:flex;flex-direction:column}
-.hidden{display:none!important}
+  :root { --paper:#eef1ef; --paper-raised:#f6f7f5; --ink:#1e2a28; --ink-soft:#55635f;
+    --pine:#2e5a54; --pine-deep:#234641; --line:#d5dbd7; --leaf:#7a8b6f; --straw:#b0a98f; --shadow:rgba(35,70,65,.10); }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",sans-serif; line-height:1.7; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:660px; margin:0 auto; padding:32px 22px 120px; }
+  h1 { font-family:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif; font-weight:600; font-size:26px; margin:4px 0 2px; }
+  .eyebrow { font-size:12.5px; color:var(--ink-soft); }
+  .lede { color:var(--ink-soft); font-size:14.5px; margin:14px 0 18px; } .lede b { color:var(--pine); }
+  .state { text-align:center; color:var(--ink-soft); padding:60px 20px; }
+  .state .big { font-family:"Hiragino Mincho ProN","Yu Mincho",serif; font-size:19px; color:var(--ink); margin-bottom:8px; }
 
-/* シール風の共通パーツ */
-.sticker{background:var(--paper);border:3px solid var(--ink);border-radius:20px;box-shadow:5px 6px 0 rgba(0,0,0,.85)}
-.title{
-  font-family:'Reggae One',cursive; color:var(--red); text-align:center;
-  font-size:clamp(34px,9vw,46px); letter-spacing:.02em; line-height:1.15;
-  -webkit-text-stroke:2px var(--ink); paint-order:stroke fill;
-  text-shadow:3px 3px 0 var(--ink);
-  transform:rotate(-2deg); margin:8px 0 2px;
-}
-.subtitle{text-align:center;font-weight:800;font-size:14px;background:var(--ink);color:var(--yellow);
-  display:inline-block;padding:4px 14px;border-radius:999px;margin:6px auto 0}
-.center{text-align:center}
-button{font-family:inherit;cursor:pointer}
-.btn{
-  display:block;width:100%;border:3px solid var(--ink);border-radius:18px;
-  font-weight:800;font-size:20px;padding:16px;box-shadow:4px 5px 0 rgba(0,0,0,.85);
-  transition:transform .08s;
-}
-.btn:active{transform:translate(3px,4px);box-shadow:1px 1px 0 rgba(0,0,0,.85)}
-.btn-red{background:var(--red);color:#fff}
-.btn-yellow{background:var(--yellow);color:var(--ink)}
+  .topic { background:var(--paper-raised); border:1px solid var(--line); border-left:3px solid var(--line);
+    border-radius:8px; padding:14px 16px; margin-bottom:12px; cursor:pointer; transition:.15s; }
+  .topic:hover { border-color:#c3ccc7; }
+  .topic.selected { background:var(--pine); border-color:var(--pine-deep); border-left-color:var(--pine-deep); color:#f2f5f3; }
+  .topic.selected .summary { color:#cfe0da; }
+  .t-head { display:flex; align-items:center; gap:10px; }
+  .rich { flex:none; font-size:11.5px; padding:2px 9px; border-radius:999px; color:#fff; }
+  .rich.濃{background:var(--pine);} .rich.中{background:var(--leaf);} .rich.軽{background:#8fa86a;}
+  .topic.selected .rich { background:rgba(255,255,255,.22); }
+  .title { font-family:"Hiragino Mincho ProN","Yu Mincho",serif; font-size:16.5px; font-weight:600; }
+  .summary { font-size:13px; color:var(--ink-soft); margin:6px 0 0; }
 
-/* ---------- ログイン画面 ---------- */
-#loginScreen .hero{width:min(78%,340px);max-height:34vh;object-fit:contain;display:block;margin:4px auto 0;filter:drop-shadow(0 6px 0 rgba(0,0,0,.15))}
-.numgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0}
-.numgrid button{
-  aspect-ratio:1;border:3px solid var(--ink);border-radius:14px;background:#fff;
-  font-size:20px;font-weight:800;box-shadow:3px 3px 0 rgba(0,0,0,.8);
-}
-.numgrid button.sel{background:var(--red);color:#fff;transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(0,0,0,.8)}
-label.small{font-weight:800;font-size:15px;display:block;margin:12px 0 6px}
-input[type=password],textarea{
-  width:100%;border:3px solid var(--ink);border-radius:14px;padding:12px;font-size:18px;
-  font-family:inherit;background:#fff;
-}
-.card{padding:18px;margin-top:14px}
+  .article-tabs { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .atab { font-size:13px; padding:6px 14px; border-radius:999px; border:1px solid var(--line); background:var(--paper-raised); cursor:pointer; color:var(--ink-soft); }
+  .atab.active { background:var(--pine); color:#f2f5f3; border-color:var(--pine); }
+  .article { background:var(--paper-raised); border:1px solid var(--line); border-radius:10px; padding:24px 26px; }
+  .article h2 { font-family:"Hiragino Mincho ProN","Yu Mincho",serif; font-size:20px; font-weight:600; margin:0 0 14px; line-height:1.4; }
+  .article p { font-size:14.5px; margin:0 0 12px; }
 
-/* ---------- やくそくモーダル ---------- */
-.modalbg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
-.modal{max-width:440px;width:100%;padding:20px}
-.modal h2{font-family:'Reggae One',cursive;color:var(--red);-webkit-text-stroke:1.5px var(--ink);paint-order:stroke fill;font-size:28px;text-align:center}
-.promise{display:flex;gap:10px;align-items:flex-start;margin:12px 0;font-weight:700;font-size:16px;line-height:1.5}
-.promise .n{flex:none;width:34px;height:34px;border:3px solid var(--ink);border-radius:50%;background:var(--yellow);
-  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
+  .ig-wrap { margin-top:28px; }
+  .ig-label { font-size:12.5px; color:var(--ink-soft); margin-bottom:12px; }
+  .ig-card { position:relative; width:300px; height:300px; overflow:hidden; --accent:var(--pine-deep); --accent-soft:rgba(35,70,65,.12);
+    background:radial-gradient(circle at 82% 16%,var(--accent-soft),transparent 42%),#fdfdfb; color:var(--ink); border-radius:16px;
+    padding:30px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 10px 28px rgba(35,70,65,.14); border:1px solid var(--line); }
+  .ig-card::before { content:""; position:absolute; inset:0; background-image:radial-gradient(var(--accent-soft) 1px,transparent 1px); background-size:15px 15px; opacity:.5; }
+  .ig-frame { position:absolute; inset:13px; border:1px solid var(--accent); opacity:.28; border-radius:9px; }
+  .ig-quotemark { position:absolute; top:4px; left:20px; font-family:"Hiragino Mincho ProN","Yu Mincho",serif; font-size:96px; line-height:1; color:var(--accent); opacity:.16; }
+  .ig-card .q { position:relative; z-index:1; outline:none; font-family:"Hiragino Mincho ProN","Yu Mincho",serif; line-height:1.8; font-weight:600; color:var(--ink); }
+  .ig-foot { position:relative; z-index:1; margin-top:18px; display:flex; align-items:center; gap:8px; }
+  .ig-rule { flex:1; height:1px; background:var(--accent); opacity:.4; }
+  .ig-sig { font-size:11.5px; color:var(--accent); font-weight:600; white-space:nowrap; }
+  .ig-leaf { position:absolute; right:20px; bottom:18px; width:34px; height:34px; color:var(--accent); opacity:.55; }
+  .ig-leaf.hidden { opacity:0; }
 
-/* ---------- モードえらび ---------- */
-.modecard{display:flex;align-items:center;gap:14px;padding:18px;margin-top:16px;text-align:left;width:100%}
-.modecard .emoji{font-size:44px;flex:none}
-.modecard b{font-size:22px;display:block}
-.modecard span{font-size:13px;font-weight:700;color:#555}
-.modecard.hint{background:#fff}
-.modecard.saku{background:#fff}
+  .editor { margin-top:18px; background:var(--paper-raised); border:1px solid var(--line); border-radius:10px; padding:16px 18px; }
+  .ed-row { margin-bottom:14px; } .ed-row:last-child { margin-bottom:0; }
+  .ed-label { font-size:12px; color:var(--ink-soft); margin-bottom:7px; }
+  .qp { display:block; width:100%; text-align:left; background:#fff; border:1px solid var(--line); border-radius:7px; padding:8px 12px; margin-bottom:6px;
+    font-family:"Hiragino Mincho ProN","Yu Mincho",serif; font-size:13px; color:var(--ink); cursor:pointer; }
+  .qp.active { border-color:var(--pine); background:#eaf0ee; color:var(--pine); font-weight:600; box-shadow:inset 3px 0 0 var(--pine); }
+  textarea.ed-text, input.ed-input { width:100%; font-family:"Hiragino Mincho ProN","Yu Mincho",serif; font-size:14px; color:var(--ink);
+    background:#fff; border:1px solid var(--line); border-radius:7px; padding:10px 12px; }
+  .swatches { display:flex; gap:10px; } .sw { width:30px; height:30px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
+  .sw.active { border-color:var(--ink); } .sw.active::after { content:"✓"; color:#fff; display:flex; align-items:center; justify-content:center; height:100%; }
+  .toggle { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-soft); }
 
-/* ---------- チャット ---------- */
-#chatScreen{display:flex;flex-direction:column;height:100dvh;max-width:520px;margin:0 auto;padding:10px 12px}
-.chathead{display:flex;align-items:center;gap:10px;padding:8px 12px}
-.chathead img{width:48px;height:48px;border-radius:50%;border:3px solid var(--ink);background:#fff;object-fit:contain;padding:3px}
-.chathead .name{font-family:'Reggae One',cursive;font-size:19px;color:var(--red);-webkit-text-stroke:1px var(--ink);paint-order:stroke fill}
-.badge{font-size:11px;font-weight:800;background:var(--ink);color:var(--yellow);border-radius:999px;padding:2px 8px}
-.remain{margin-left:auto;font-size:12px;font-weight:800;background:var(--green);color:#fff;border:2px solid var(--ink);border-radius:999px;padding:3px 9px;white-space:nowrap}
-.backbtn{border:2px solid var(--ink);background:#fff;border-radius:10px;font-weight:800;padding:4px 8px;font-size:13px;box-shadow:2px 2px 0 rgba(0,0,0,.8)}
-#msgs{flex:1;overflow-y:auto;padding:12px 2px;display:flex;flex-direction:column;gap:12px}
-.row{display:flex;gap:8px;align-items:flex-end}
-.row.me{flex-direction:row-reverse}
-.row img{width:38px;height:38px;border-radius:50%;border:2.5px solid var(--ink);background:#fff;flex:none;object-fit:contain;padding:2px}
-.bubble{
-  max-width:78%;padding:11px 14px;border:3px solid var(--ink);border-radius:18px;
-  font-size:16px;font-weight:700;line-height:1.65;white-space:pre-wrap;word-break:break-word;
-  box-shadow:3px 4px 0 rgba(0,0,0,.8);
-}
-.row.ai .bubble{background:#fff;border-bottom-left-radius:4px}
-.row.me .bubble{background:var(--yellow);border-bottom-right-radius:4px}
-.typing{display:inline-block}
-.typing i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ink);margin:0 2px;animation:b .9s infinite}
-.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
-@keyframes b{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-.inputbar{display:flex;gap:8px;padding:8px 0 4px;align-items:flex-end}
-.inputbar textarea{flex:1;font-size:17px;font-weight:700;resize:none;max-height:150px;border-radius:16px}
-.sendbtn{flex:none;width:58px;height:58px;border:3px solid var(--ink);border-radius:16px;background:var(--red);
-  color:#fff;font-size:24px;box-shadow:3px 4px 0 rgba(0,0,0,.85)}
-.sendbtn:active{transform:translate(2px,3px);box-shadow:0 0 0}
-.ai-note{text-align:center;font-size:11px;font-weight:800;color:#666;padding:4px 0 2px}
-@media (prefers-reduced-motion: reduce){ .typing i{animation:none} }
+  button.go, button.ghost { font-family:inherit; font-size:14.5px; font-weight:600; cursor:pointer; padding:11px 20px; border-radius:999px; transition:.15s; }
+  button.go { color:#f2f5f3; background:var(--pine); border:none; box-shadow:0 4px 14px var(--shadow); }
+  button.go:hover { background:var(--pine-deep); } button.go:disabled { opacity:.4; box-shadow:none; }
+  button.ghost { background:transparent; color:var(--pine); border:1px solid var(--pine); }
+  .bar { position:fixed; left:0; right:0; bottom:0; background:linear-gradient(to top,var(--paper) 72%,rgba(238,241,239,0)); padding:16px 22px 20px; }
+  .bar-inner { max-width:660px; margin:0 auto; display:flex; align-items:center; gap:14px; }
+  .count { flex:1; font-size:13.5px; color:var(--ink-soft); } .count b { color:var(--pine); }
+  .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%) translateY(10px); background:var(--ink); color:#eef1ef; font-size:13.5px; padding:10px 18px; border-radius:999px; opacity:0; pointer-events:none; transition:.25s; }
+  .toast.show { opacity:1; transform:translateX(-50%); }
+  .login { text-align:center; padding:80px 20px; }
 </style>
 </head>
 <body>
+  <div class="wrap">
+    <div class="eyebrow" id="dateLabel"></div>
+    <h1>今日の種</h1>
 
-<!-- ============ ログイン ============ -->
-<div class="wrap" id="loginScreen">
-  <h1 class="title">AIヒントン</h1>
-  <div class="center"><span class="subtitle">べんきょうの あいぼう</span></div>
-  <img class="hero" id="heroImg" src="character.png" alt="ヒントン" onerror="this.style.display='none'">
-  <div class="sticker card">
-    <label class="small">① じぶんの しゅっせきばんごうを えらぼう</label>
-    <div class="numgrid" id="numgrid"></div>
-    <label class="small">② クラスの パスワードを いれよう</label>
-    <input type="password" id="passInput" placeholder="パスワード" autocomplete="off">
-    <div style="height:14px"></div>
-    <button class="btn btn-red" onclick="tryLogin()">スタート!</button>
-    <p id="loginErr" class="center" style="color:var(--red);font-weight:800;margin-top:8px"></p>
-  </div>
-  <p class="ai-note" style="margin-top:10px">これはAI(人工知能)のアプリです。会話は先生が確認します。</p>
-</div>
-
-<!-- ============ 3つのやくそく ============ -->
-<div class="modalbg hidden" id="rulesModal">
-  <div class="sticker modal">
-    <h2>3つの やくそく</h2>
-    <div class="promise"><div class="n">1</div><div>本名・じゅうしょ・電話ばんごうなど、<b>じぶんや友だちのひみつは書かない!</b></div></div>
-    <div class="promise"><div class="n">2</div><div>ヒントンは答えを教えないよ。<b>答えは じぶんの力で見つけよう!</b></div></div>
-    <div class="promise"><div class="n">3</div><div>ヒントンはAIだから、まちがえることもある。<b>こまったら先生に聞こう!</b></div></div>
-    <button class="btn btn-yellow" onclick="agreeRules()">やくそくする!</button>
-  </div>
-</div>
-
-<!-- ============ モードえらび ============ -->
-<div class="wrap hidden" id="modeScreen">
-  <h1 class="title" style="font-size:30px">なにを する?</h1>
-  <button class="sticker modecard hint" onclick="startChat('hint')">
-    <span class="emoji">🔍</span>
-    <span><b>べんきょうの ヒント</b><span>わからないもんだいの ヒントをもらおう</span></span>
-  </button>
-  <button class="sticker modecard saku" onclick="startChat('sakubun')">
-    <span class="emoji">✏️</span>
-    <span><b>さくぶん チェック</b><span>書いたさくぶんを 見てもらおう</span></span>
-  </button>
-  <div style="flex:1"></div>
-  <button class="backbtn" style="align-self:center;margin-bottom:8px" onclick="backToLogin()">🏠 さいしょにもどる</button>
-  <p class="ai-note">きみは <b id="whoami"></b> ばんで ログインちゅう</p>
-</div>
-
-<!-- ============ チャット ============ -->
-<div id="chatScreen" class="hidden">
-  <div class="sticker chathead">
-    <button class="backbtn" onclick="backToMode()">←もどる</button>
-    <button class="backbtn" onclick="backToLogin()">🏠</button>
-    <img src="avatar.png" alt="" onerror="this.src='character.png'">
-    <div>
-      <div class="name">ヒントン</div>
-      <span class="badge">AIだよ</span>
+    <div id="login" class="login">
+      <p class="lede">はじめにログインしてください。</p>
+      <button class="go" id="loginBtn">Googleでログイン</button>
     </div>
-    <span class="remain" id="remainBadge"></span>
+
+    <div id="app" style="display:none;">
+      <div id="content"></div>
+    </div>
   </div>
-  <div id="msgs"></div>
-  <div class="inputbar">
-    <textarea id="chatInput" rows="1" placeholder="ここに かいてね"></textarea>
-    <button class="sendbtn" onclick="send()" id="sendBtn">➤</button>
+
+  <div class="bar" id="bar" style="display:none;">
+    <div class="bar-inner">
+      <div class="count" id="count"></div>
+      <button class="go" id="action" disabled></button>
+    </div>
   </div>
-  <p class="ai-note">AIはまちがえることもあるよ。さいごは じぶんで たしかめよう!</p>
-</div>
+  <div class="toast" id="toast"></div>
 
-<script>
-/* ==================================================
-   ★★★ 先生の設定はここ ★★★
-   ================================================== */
-const WORKER_URL   = "https://ai-hinton2.mrk-h14-12-11.workers.dev"; // ←手順書の④で貼りかえ
-const NUM_STUDENTS = 40;           // ←人数(パスワードは先生用ダッシュボードで設定)
-/* ================================================== */
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, query, where, orderBy, limit, getDocs, updateDoc }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-let studentNo = null, mode = null, history = [], classPass = "";
-
-// 出席番号グリッド
-const grid = document.getElementById('numgrid');
-for (let i = 1; i <= NUM_STUDENTS; i++) {
-  const b = document.createElement('button');
-  b.textContent = i;
-  b.onclick = () => {
-    grid.querySelectorAll('button').forEach(x => x.classList.remove('sel'));
-    b.classList.add('sel'); studentNo = i;
+  // ▼ 自分の Firebase 設定に置き換える（READMEの手順3参照）
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT",
+    storageBucket: "YOUR_PROJECT.appspot.com",
   };
-  grid.appendChild(b);
-}
+  const COLLECTION = "topicBatches";
+  const RICH_COLOR = {
+    "濃":{accent:"#234641",soft:"rgba(35,70,65,.13)"}, "中":{accent:"#5f7a58",soft:"rgba(95,122,88,.14)"},
+    "軽":{accent:"#84a35b",soft:"rgba(132,163,91,.16)"}, "藍":{accent:"#2f4858",soft:"rgba(47,72,88,.13)"},
+  };
 
-async function tryLogin() {
-  const err = document.getElementById('loginErr');
-  if (!studentNo) { err.textContent = 'ばんごうを えらんでね'; return; }
-  const pass = document.getElementById('passInput').value;
-  err.textContent = 'かくにん中…';
-  try {
-    const res = await fetch(WORKER_URL + '/login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pass })
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const dbf = getFirestore(app);
+  const $ = (id) => document.getElementById(id);
+  $("dateLabel").textContent = new Date().toLocaleDateString("ja-JP",{year:"numeric",month:"long",day:"numeric",weekday:"long"});
+
+  $("loginBtn").onclick = () => signInWithPopup(auth, new GoogleAuthProvider()).catch((e)=>toast(e.message));
+  onAuthStateChanged(auth, (user) => {
+    if (user) { $("login").style.display="none"; $("app").style.display="block"; $("bar").style.display="block"; loadBatch(); }
+    else { $("login").style.display="block"; $("app").style.display="none"; $("bar").style.display="none"; }
+  });
+
+  let current = null;   // 現在のバッチ {ref, data}
+  const selected = new Set();
+
+  async function latest(status) {
+    const q = query(collection(dbf, COLLECTION), where("status","==",status), orderBy("createdAt","desc"), limit(1));
+    const snap = await getDocs(q);
+    return snap.empty ? null : { ref: snap.docs[0].ref, data: snap.docs[0].data() };
+  }
+
+  async function loadBatch() {
+    // 記事ができていればそれを、なければ選択待ちを表示
+    current = await latest("composed") || await latest("pending");
+    if (!current) return renderEmpty();
+    if (current.data.status === "composed") renderArticles();
+    else renderTopics();
+  }
+
+  function renderEmpty() {
+    $("content").innerHTML = `<div class="state"><div class="big">まだ種がありません</div>記録がたまると、ここに書けるテーマが並びます。</div>`;
+    $("count").textContent = ""; $("action").style.display="none";
+  }
+
+  // ── 選択画面 ──
+  function renderTopics() {
+    const topics = current.data.topics || [];
+    let html = `<p class="lede">この数日の記録から、<b>${topics.length}本の種</b>が見つかりました。書きたいものを選んでください。</p>`;
+    topics.forEach((t) => {
+      html += `<div class="topic" data-id="${t.id}"><div class="t-head"><span class="rich ${t.richness}">${t.richness}</span><span class="title">${esc(t.title)}</span></div><p class="summary">${esc(t.summary)}</p></div>`;
     });
-    const data = await res.json();
-    if (!data.ok) {
-      if (data.reason === 'term') { err.textContent = 'ことしの りようは おわりました。先生に きいてね。'; return; }
-      err.textContent = 'パスワードが ちがうよ'; return;
-    }
-  } catch (e) {
-    err.textContent = 'つながらないよ。先生に教えてね'; return;
-  }
-  classPass = pass;
-  err.textContent = '';
-  document.getElementById('rulesModal').classList.remove('hidden');
-}
-function agreeRules() {
-  document.getElementById('rulesModal').classList.add('hidden');
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('whoami').textContent = studentNo;
-  document.getElementById('modeScreen').classList.remove('hidden');
-}
-
-const GREET = {
-  hint: 'やあ!ぼくはAIのヒントン!⚡\nわからないもんだいを、ここに書いてみて。\n答えは教えないけど、きみが自分でとけるように、とっておきのヒントを出すぜ!',
-  sakubun: 'よっ!さくぶんチェックのじかんだ!✏️\n書いたさくぶんを、ここに ぜんぶ はりつけるか、うちこんでみて。\nいいところ、たーっぷり見つけるからな!'
-};
-
-function startChat(m) {
-  mode = m; history = [];
-  document.getElementById('modeScreen').classList.add('hidden');
-  document.getElementById('chatScreen').classList.remove('hidden');
-  document.getElementById('msgs').innerHTML = '';
-  document.getElementById('chatInput').placeholder =
-    m === 'sakubun' ? 'さくぶんを ここに はりつけてね' : 'もんだいや しつもんを かいてね';
-  addBubble('ai', GREET[m]);
-}
-function backToMode() {
-  document.getElementById('chatScreen').classList.add('hidden');
-  document.getElementById('modeScreen').classList.remove('hidden');
-}
-function backToLogin() {
-  // 会話・番号・パスワードをリセットして最初の画面へ(次の子に交代できる)
-  history = []; mode = null; studentNo = null; classPass = '';
-  document.getElementById('msgs').innerHTML = '';
-  document.getElementById('chatScreen').classList.add('hidden');
-  document.getElementById('modeScreen').classList.add('hidden');
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('passInput').value = '';
-  document.querySelectorAll('#numgrid button').forEach(x => x.classList.remove('sel'));
-  document.getElementById('remainBadge').textContent = '';
-  window.scrollTo(0, 0);
-}
-
-function addBubble(who, text) {
-  const msgs = document.getElementById('msgs');
-  const row = document.createElement('div');
-  row.className = 'row ' + (who === 'ai' ? 'ai' : 'me');
-  if (who === 'ai') {
-    const img = document.createElement('img');
-    img.src = 'avatar.png'; img.onerror = () => img.src = 'character.png';
-    row.appendChild(img);
-  }
-  const b = document.createElement('div');
-  b.className = 'bubble';
-  if (text === '...') b.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
-  else b.textContent = text;
-  row.appendChild(b);
-  msgs.appendChild(row);
-  msgs.scrollTop = msgs.scrollHeight;
-  return b;
-}
-
-const ta = document.getElementById('chatInput');
-ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 150) + 'px'; });
-
-async function send() {
-  const text = ta.value.trim();
-  if (!text) return;
-  ta.value = ''; ta.style.height = 'auto';
-  addBubble('me', text);
-  history.push({ role: 'user', content: text });
-  const wait = addBubble('ai', '...');
-  document.getElementById('sendBtn').disabled = true;
-  try {
-    const res = await fetch(WORKER_URL + '/chat', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentNo, mode, messages: history, pass: classPass })
+    $("content").innerHTML = html;
+    document.querySelectorAll(".topic").forEach((el) => {
+      el.onclick = () => {
+        const id = Number(el.dataset.id);
+        if (selected.has(id)) { selected.delete(id); el.classList.remove("selected"); }
+        else { selected.add(id); el.classList.add("selected"); }
+        const n = selected.size;
+        $("count").innerHTML = n ? `<b>${n}本</b>を選択中` : "まだ選んでいません";
+        $("action").disabled = n===0; $("action").textContent = n ? `選んだ${n}本を書く` : "選んで書く";
+      };
     });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    wait.textContent = data.reply;
-    history.push({ role: 'assistant', content: data.reply });
-    if (data.remaining !== undefined)
-      document.getElementById('remainBadge').textContent = 'あと' + data.remaining + '回';
-  } catch (e) {
-    wait.textContent = 'うまくつながらなかった…💦（エラー: ' + (e.message || e) + '）';
+    $("count").innerHTML = "まだ選んでいません";
+    $("action").style.display=""; $("action").disabled=true; $("action").textContent="選んで書く";
+    $("action").onclick = async () => {
+      $("action").disabled = true;
+      await updateDoc(current.ref, { selectedIds:[...selected].sort((a,b)=>a-b), status:"selected" });
+      $("content").innerHTML = `<div class="state"><div class="big">送りました</div>記事ができたら、またこのページを開いてください（数十分後）。</div>`;
+      $("count").textContent=""; $("action").style.display="none";
+    };
   }
-  document.getElementById('sendBtn').disabled = false;
-  document.getElementById('msgs').scrollTop = 1e9;
-}
 
-// ===== 隠し入口:トップのヒントンを1.5秒 長押しで先生用ページへ =====
-(function(){
-  const hero = document.getElementById('heroImg');
-  if (!hero) return;
-  let timer = null;
-  const start = () => { timer = setTimeout(() => { location.href = 'teacher.html'; }, 1500); };
-  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
-  hero.addEventListener('mousedown', start);
-  hero.addEventListener('touchstart', start, { passive: true });
-  ['mouseup','mouseleave','touchend','touchcancel','touchmove'].forEach(ev =>
-    hero.addEventListener(ev, cancel));
-  hero.addEventListener('contextmenu', e => e.preventDefault()); // 長押しメニュー抑制
-  hero.style.webkitUserSelect = 'none'; hero.style.userSelect = 'none';
-  hero.draggable = false;
-})();
+  // ── 記事プレビュー＆カード編集画面 ──
+  function renderArticles() {
+    const arts = current.data.articles || [];
+    if (!arts.length) return renderEmpty();
+    let html = `<p class="lede">個人名を消して、あなたの教育観と文体で記事にしました。読んで、カードを仕上げてください。</p>
+      <div class="article-tabs" id="atabs"></div><div class="article" id="article"></div>
+      <div class="ig-wrap"><div class="ig-label">Instagram / note に使うカード（言葉は直接タップして編集できます）</div>
+      <div class="ig-card" id="igCard"><div class="ig-frame"></div><div class="ig-quotemark">"</div>
+        <div class="q" id="igQuote" contenteditable="true" spellcheck="false"></div>
+        <div class="ig-foot"><span class="ig-rule"></span><span class="ig-sig" id="igSig">日々のリフレクションより</span></div>
+        <svg class="ig-leaf" id="igLeaf" viewBox="0 0 32 32" fill="none"><path d="M16 30C16 30 4 24 4 13C4 7 9 3 16 3C23 3 28 7 28 13C28 24 16 30 16 30Z" stroke="currentColor" stroke-width="1.4"/><path d="M16 27V9M16 15L11 11M16 18L21 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+      <div class="editor">
+        <div class="ed-row"><div class="ed-label">言葉の候補（タップで入力欄へ）</div><div id="qpList"></div></div>
+        <div class="ed-row"><div class="ed-label">カードの言葉</div><textarea class="ed-text" id="edText" rows="2"></textarea></div>
+        <div class="ed-row"><div class="ed-label">署名</div><input class="ed-input" id="edSig" value="日々のリフレクションより"></div>
+        <div class="ed-row"><div class="ed-label">カードの色</div><div class="swatches" id="swatches"></div></div>
+        <div class="ed-row"><label class="toggle"><input type="checkbox" id="edLeaf" checked> 芽のモチーフを表示</label></div>
+      </div>
+      <div class="ed-row" style="margin-top:16px;"><button class="ghost" id="copyBtn">note用の本文をコピー</button></div></div>`;
+    $("content").innerHTML = html;
+
+    const tabs = $("atabs");
+    arts.forEach((a,i) => {
+      const b = document.createElement("button");
+      b.className = "atab"+(i===0?" active":""); b.textContent = a.title.slice(0,12)+(a.title.length>12?"…":"");
+      b.onclick = () => { showArticle(a); [...tabs.children].forEach(c=>c.classList.remove("active")); b.classList.add("active"); };
+      tabs.appendChild(b);
+    });
+    // スウォッチ
+    const sw = $("swatches");
+    ["濃","中","軽","藍"].forEach((k) => {
+      const s=document.createElement("div"); s.className="sw"; s.style.background=RICH_COLOR[k].accent; s.dataset.key=k;
+      s.onclick=()=>setColor(k); sw.appendChild(s);
+    });
+    // 入力連動
+    $("edText").addEventListener("input", ()=>setQuote($("edText").value));
+    $("igQuote").addEventListener("input", ()=>{ $("edText").value=$("igQuote").textContent; setQuote($("igQuote").textContent,true); });
+    $("edSig").addEventListener("input", ()=>$("igSig").textContent=$("edSig").value||" ");
+    $("edLeaf").addEventListener("change",(e)=>$("igLeaf").classList.toggle("hidden",!e.target.checked));
+    $("copyBtn").onclick = () => { navigator.clipboard.writeText(activeArticle.markdown); toast("本文をコピーしました"); };
+
+    showArticle(arts[0]);
+
+    $("count").textContent = "カードを仕上げて確定してください";
+    $("action").style.display=""; $("action").disabled=false; $("action").textContent="確定して投稿予約";
+    $("action").onclick = async () => {
+      $("action").disabled = true;
+      // 編集後のカード内容を保存（run-processが後で画像化・投稿）
+      const idx = arts.findIndex(a=>a===activeArticle);
+      arts[idx].card = { quote:$("igQuote").textContent, sig:$("edSig").value, rich:currentColor, leaf:$("edLeaf").checked };
+      await updateDoc(current.ref, { articles:arts, status:"ready" });
+      $("content").innerHTML = `<div class="state"><div class="big">仕上げました</div>note の下書き本文はコピー済みのものを貼り付け、公開ボタンを押してください。<br>カードは投稿予約されました。</div>`;
+      $("count").textContent=""; $("action").style.display="none";
+    };
+  }
+
+  let activeArticle=null, currentColor="濃";
+  function showArticle(a) {
+    activeArticle=a;
+    $("article").innerHTML = `<h2>${esc(a.title)}</h2>` + a.markdown.split("\n").slice(1).filter(Boolean).map(p=>`<p>${esc(p.replace(/^#+\s*/,""))}</p>`).join("");
+    setColor(a.rich||"濃");
+    const qp=$("qpList"); qp.innerHTML="";
+    (a.quotes||[]).forEach((q,i)=>{ const b=document.createElement("button"); b.className="qp"+(i===0?" active":""); b.textContent=q;
+      b.onclick=()=>{ $("edText").value=q; setQuote(q); [...qp.children].forEach(x=>x.classList.remove("active")); b.classList.add("active"); }; qp.appendChild(b); });
+    const first=(a.card&&a.card.quote)||(a.quotes&&a.quotes[0])||"";
+    $("edText").value=first; setQuote(first);
+    $("edSig").value=(a.card&&a.card.sig)||"日々のリフレクションより"; $("igSig").textContent=$("edSig").value;
+  }
+  function setQuote(q,noText){ const el=$("igQuote"); if(!noText) el.textContent=q; const n=(q||"").length;
+    el.style.fontSize = n<=12?"26px":n<=22?"21px":n<=34?"18px":"16px"; }
+  function setColor(k){ const c=RICH_COLOR[k]||RICH_COLOR["濃"]; currentColor=k; const card=$("igCard");
+    card.style.setProperty("--accent",c.accent); card.style.setProperty("--accent-soft",c.soft);
+    document.querySelectorAll(".sw").forEach(s=>s.classList.toggle("active",s.dataset.key===k)); }
+
+  function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+  function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400);}
 </script>
 </body>
 </html>
