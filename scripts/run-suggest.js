@@ -9,7 +9,7 @@ import { db, COLLECTION } from "../lib/firebase.js";
 import { FieldValue } from "firebase-admin/firestore";
 
 async function main() {
-  const reflectionText = await fetchReflections({ sinceDays: 2 });
+  const reflectionText = await fetchReflections({ sinceDays: 1000 });
   if (!reflectionText.trim()) { console.log("リフレクションが無いのでスキップ"); return; }
 
   const topics = await suggestTopics(reflectionText);
