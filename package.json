@@ -1,0 +1,16 @@
+{
+  "name": "reflection-pipeline",
+  "version": "1.0.0",
+  "description": "Padletのリフレクションから、教育観を反映したnote記事とInstagramカードを半自動で作るパイプライン",
+  "type": "module",
+  "scripts": {
+    "instagram": "node scripts/run-instagram.js",
+    "suggest": "node scripts/run-suggest.js",
+    "process": "node scripts/run-process.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "puppeteer": "^22.0.0"
+  }
+}
