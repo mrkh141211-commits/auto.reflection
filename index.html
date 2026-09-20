@@ -37,6 +37,7 @@
   .article-tabs { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
   .atab { font-size:13px; padding:6px 14px; border-radius:999px; border:1px solid var(--line); background:var(--paper-raised); cursor:pointer; color:var(--ink-soft); }
   .atab.active { background:var(--pine); color:#f2f5f3; border-color:var(--pine); }
+  .nav { display:flex; gap:8px; margin:2px 0 20px; }
   .article { background:var(--paper-raised); border:1px solid var(--line); border-radius:10px; padding:24px 26px; }
   .article h2 { font-family:"Hiragino Mincho ProN","Yu Mincho",serif; font-size:20px; font-weight:600; margin:0 0 14px; line-height:1.4; }
   .article p { font-size:14.5px; margin:0 0 12px; }
@@ -44,17 +45,15 @@
   .ig-wrap { margin-top:28px; }
   .ig-label { font-size:12.5px; color:var(--ink-soft); margin-bottom:12px; }
   .ig-card { position:relative; width:300px; height:300px; overflow:hidden; --accent:var(--pine-deep); --accent-soft:rgba(35,70,65,.12);
-    background:radial-gradient(circle at 82% 16%,var(--accent-soft),transparent 42%),#fdfdfb; color:var(--ink); border-radius:16px;
+    background:#fbfbf8; color:var(--ink); border-radius:16px;
     padding:30px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 10px 28px rgba(35,70,65,.14); border:1px solid var(--line); }
-  .ig-card::before { content:""; position:absolute; inset:0; background-image:radial-gradient(var(--accent-soft) 1px,transparent 1px); background-size:15px 15px; opacity:.5; }
+  .ig-art { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
   .ig-frame { position:absolute; inset:13px; border:1px solid var(--accent); opacity:.28; border-radius:9px; }
   .ig-quotemark { position:absolute; top:4px; left:20px; font-family:"Hiragino Mincho ProN","Yu Mincho",serif; font-size:96px; line-height:1; color:var(--accent); opacity:.16; }
   .ig-card .q { position:relative; z-index:1; outline:none; font-family:"Hiragino Mincho ProN","Yu Mincho",serif; line-height:1.8; font-weight:600; color:var(--ink); }
   .ig-foot { position:relative; z-index:1; margin-top:18px; display:flex; align-items:center; gap:8px; }
   .ig-rule { flex:1; height:1px; background:var(--accent); opacity:.4; }
   .ig-sig { font-size:11.5px; color:var(--accent); font-weight:600; white-space:nowrap; }
-  .ig-leaf { position:absolute; right:20px; bottom:18px; width:34px; height:34px; color:var(--accent); opacity:.55; }
-  .ig-leaf.hidden { opacity:0; }
 
   .editor { margin-top:18px; background:var(--paper-raised); border:1px solid var(--line); border-radius:10px; padding:16px 18px; }
   .ed-row { margin-bottom:14px; } .ed-row:last-child { margin-bottom:0; }
@@ -92,7 +91,7 @@
       <div style="margin-top:14px;"><button class="go" id="enterBtn">入る</button></div>
     </div>
 
-    <div id="app" style="display:none;"><div id="content"></div></div>
+    <div id="app" style="display:none;"><div class="nav" id="nav"></div><div id="content"></div></div>
   </div>
 
   <div class="bar" id="bar" style="display:none;">
@@ -100,6 +99,7 @@
   </div>
   <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, collection, query, where, orderBy, limit, getDocs, updateDoc }
@@ -134,7 +134,7 @@
   $("pass").addEventListener("keydown",(e)=>{ if(e.key==="Enter") tryEnter(); });
   function tryEnter() {
     if ($("pass").value === PASSCODE && PASSCODE !== "CHANGE_ME") {
-      $("gate").style.display="none"; $("app").style.display="block"; $("bar").style.display="block"; loadBatch();
+      $("gate").style.display="none"; $("app").style.display="block"; renderNav("current"); showCurrent();
     } else if (PASSCODE === "CHANGE_ME") {
       $("gateMsg").textContent = "合言葉が未設定です（コードのCHANGE_MEを書き換えてください）";
     } else {
@@ -143,8 +143,16 @@
     }
   }
 
-  let current = null;
+  let current = null, archiveRows = [];
   const selected = new Set();
+
+  function renderNav(active){
+    const nav=$("nav");
+    nav.innerHTML=`<button class="atab${active==="current"?" active":""}" id="navCur">今日の種</button><button class="atab${active==="archive"?" active":""}" id="navArch">これまでの記事</button>`;
+    $("navCur").onclick=showCurrent; $("navArch").onclick=showArchive;
+  }
+  function showCurrent(){ renderNav("current"); selected.clear(); $("bar").style.display="block"; loadBatch(); }
+  async function showArchive(){ renderNav("archive"); await renderArchiveList(); }
 
   async function latest(status) {
     const q = query(collection(dbf, COLLECTION), where("status","==",status), orderBy("createdAt","desc"), limit(1));
@@ -153,13 +161,20 @@
   }
   async function loadBatch() {
     try {
-      current = await latest("composed") || await latest("pending");
+      current = await latest("composed") || await latest("selected") || await latest("pending");
       if (!current) return renderEmpty();
-      if (current.data.status === "composed") renderArticles(); else renderTopics();
+      const s = current.data.status;
+      if (s === "composed") renderArticles();
+      else if (s === "selected") renderWaiting();
+      else renderTopics();
     } catch(e) { $("content").innerHTML = `<div class="state"><div class="big">読み込めませんでした</div><small>${esc(e.message)}</small></div>`; }
   }
   function renderEmpty() {
-    $("content").innerHTML = `<div class="state"><div class="big">まだ種がありません</div>記録がたまると、ここに書けるテーマが並びます。</div>`;
+    $("content").innerHTML = `<div class="state"><div class="big">まだ種がありません</div>記録がたまると、ここに書けるテーマが並びます。<br><small style="color:var(--straw);">新しい種は GitHub の「note 候補づくり」を実行すると作れます。</small></div>`;
+    $("count").textContent=""; $("action").style.display="none";
+  }
+  function renderWaiting() {
+    $("content").innerHTML = `<div class="state"><div class="big">記事を準備しています</div>種は選べています。GitHub の「note 記事化」を実行すると、数分で記事がここに出ます。<br><small style="color:var(--straw);">できたら、このページを開き直してください。</small></div>`;
     $("count").textContent=""; $("action").style.display="none";
   }
   function renderTopics() {
@@ -173,19 +188,19 @@
     $("count").innerHTML="まだ選んでいません"; $("action").style.display=""; $("action").disabled=true; $("action").textContent="選んで書く";
     $("action").onclick=async()=>{ $("action").disabled=true;
       await updateDoc(current.ref,{selectedIds:[...selected].sort((a,b)=>a-b),status:"selected"});
-      $("content").innerHTML=`<div class="state"><div class="big">送りました</div>記事ができたら、またこのページを開いてください（数十分後）。</div>`;
+      $("content").innerHTML=`<div class="state"><div class="big">選びました</div>GitHub の「note 記事化」を実行すると、数分で記事ができます。<br><small style="color:var(--straw);">できたら、このページを開き直してください。</small></div>`;
       $("count").textContent=""; $("action").style.display="none"; };
   }
-  function renderArticles() {
-    const arts = current.data.articles || [];
-    if(!arts.length) return renderEmpty();
-    let html = `<p class="lede">個人名を消して、あなたの教育観と文体で記事にしました。読んで、カードを仕上げてください。</p>
-      <div class="article-tabs" id="atabs"></div><div class="article" id="article"></div>
+  function buildArticleUI(arts, opts){
+    opts = opts || {}; const start = opts.start || 0;
+    $("bar").style.display="block";
+    let html = (opts.intro||"")
+      + (opts.back?`<div style="margin-bottom:14px;"><button class="atab" id="backBtn">← 一覧に戻る</button></div>`:"")
+      + `<div class="article-tabs" id="atabs"></div><div class="article" id="article"></div>
       <div class="ig-wrap"><div class="ig-label">Instagram / note に使うカード（言葉は直接タップして編集できます）</div>
-      <div class="ig-card" id="igCard"><div class="ig-frame"></div><div class="ig-quotemark">"</div>
+      <div class="ig-card" id="igCard"><svg class="ig-art" id="igArt" viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="aw1" cx="80%" cy="16%" r="62%"><stop offset="0" stop-color="currentColor" stop-opacity="0.13"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient><radialGradient id="aw2" cx="18%" cy="92%" r="58%"><stop offset="0" stop-color="currentColor" stop-opacity="0.10"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient></defs><rect width="300" height="300" fill="url(#aw1)"/><rect width="300" height="300" fill="url(#aw2)"/><g stroke="currentColor" fill="none" stroke-linecap="round" opacity="0.2"><path d="M28 254 Q150 234 272 254" stroke-width="1.4"/><path d="M54 268 Q150 254 246 268" stroke-width="1.1"/></g><path d="M150 250 C138 240 138 224 150 214 C162 224 162 240 150 250 Z" fill="currentColor" fill-opacity="0.18"/><path d="M150 250 C150 214 148 192 150 152" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity="0.32"/><g id="igCots" opacity="0.42"><path d="M150 160 C124 152 106 128 104 102 C132 106 150 128 150 158 Z" fill="currentColor" fill-opacity="0.16" stroke="currentColor" stroke-width="1.4"/><path d="M150 160 C176 152 194 128 196 102 C168 106 150 128 150 158 Z" fill="currentColor" fill-opacity="0.16" stroke="currentColor" stroke-width="1.4"/></g><g fill="currentColor" opacity="0.14"><circle cx="84" cy="66" r="2.2"/><circle cx="222" cy="58" r="1.6"/><circle cx="246" cy="150" r="1.9"/><circle cx="58" cy="152" r="1.5"/></g></svg><div class="ig-frame"></div><div class="ig-quotemark">"</div>
         <div class="q" id="igQuote" contenteditable="true" spellcheck="false"></div>
-        <div class="ig-foot"><span class="ig-rule"></span><span class="ig-sig" id="igSig">日々のリフレクションより</span></div>
-        <svg class="ig-leaf" id="igLeaf" viewBox="0 0 32 32" fill="none"><path d="M16 30C16 30 4 24 4 13C4 7 9 3 16 3C23 3 28 7 28 13C28 24 16 30 16 30Z" stroke="currentColor" stroke-width="1.4"/><path d="M16 27V9M16 15L11 11M16 18L21 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+        <div class="ig-foot"><span class="ig-rule"></span><span class="ig-sig" id="igSig">日々のリフレクションより</span></div></div>
       <div class="editor">
         <div class="ed-row"><div class="ed-label">言葉の候補（タップで入力欄へ）</div><div id="qpList"></div></div>
         <div class="ed-row"><div class="ed-label">カードの言葉</div><textarea class="ed-text" id="edText" rows="2"></textarea></div>
@@ -193,36 +208,87 @@
         <div class="ed-row"><div class="ed-label">カードの色</div><div class="swatches" id="swatches"></div></div>
         <div class="ed-row"><label class="toggle"><input type="checkbox" id="edLeaf" checked> 芽のモチーフを表示</label></div>
       </div>
-      <div class="ed-row" style="margin-top:16px;"><button class="ghost" id="copyBtn">note用の本文をコピー</button></div></div>`;
+      <div class="ed-row" style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;"><button class="ghost" id="copyBtn">note用の本文をコピー</button><button class="ghost" id="pngBtn">カードを画像で保存</button>`
+      + (opts.showDone?`<button class="ghost" id="doneBtn" style="border-color:var(--straw); color:var(--ink-soft);">この記事は完了にする（次の種へ）</button>`:"")
+      + `</div></div>`;
     $("content").innerHTML = html;
     const tabs=$("atabs");
-    arts.forEach((a,i)=>{ const b=document.createElement("button"); b.className="atab"+(i===0?" active":""); b.textContent=a.title.slice(0,12)+(a.title.length>12?"…":"");
+    arts.forEach((a,i)=>{ const b=document.createElement("button"); b.className="atab"+(i===start?" active":""); b.textContent=a.title.slice(0,12)+(a.title.length>12?"…":"");
       b.onclick=()=>{showArticle(a);[...tabs.children].forEach(c=>c.classList.remove("active"));b.classList.add("active");}; tabs.appendChild(b); });
     const sw=$("swatches"); ["濃","中","軽","藍"].forEach((k)=>{ const s=document.createElement("div"); s.className="sw"; s.style.background=RICH_COLOR[k].accent; s.dataset.key=k; s.onclick=()=>setColor(k); sw.appendChild(s); });
     $("edText").addEventListener("input",()=>setQuote($("edText").value));
     $("igQuote").addEventListener("input",()=>{$("edText").value=$("igQuote").textContent;setQuote($("igQuote").textContent,true);});
     $("edSig").addEventListener("input",()=>$("igSig").textContent=$("edSig").value||" ");
-    $("edLeaf").addEventListener("change",(e)=>$("igLeaf").classList.toggle("hidden",!e.target.checked));
+    $("edLeaf").addEventListener("change",(e)=>{ if($("igCots")) $("igCots").style.display=e.target.checked?"":"none"; });
     $("copyBtn").onclick=()=>{navigator.clipboard.writeText(activeArticle.markdown);toast("本文をコピーしました");};
-    showArticle(arts[0]);
-    $("count").textContent="カードを仕上げて確定してください"; $("action").style.display=""; $("action").disabled=false; $("action").textContent="確定して投稿予約";
-    $("action").onclick=async()=>{ $("action").disabled=true; const idx=arts.findIndex(a=>a===activeArticle);
+    $("pngBtn").onclick=()=>{
+      const card=$("igCard");
+      if(typeof html2canvas==="undefined"){ toast("画像化を読み込めませんでした（通信を確認）"); return; }
+      $("igQuote").blur();
+      const r0=card.style.borderRadius, s0=card.style.boxShadow;
+      card.style.borderRadius="0"; card.style.boxShadow="none";
+      html2canvas(card,{scale:1080/card.offsetWidth,backgroundColor:null}).then(cv=>{
+        card.style.borderRadius=r0; card.style.boxShadow=s0;
+        cv.toBlob(b=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b);
+          a.download=(((activeArticle&&activeArticle.title)||"card").replace(/[\\/:*?"<>|]/g,"").slice(0,40))+".png";
+          document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); toast("画像を保存しました"); });
+      }).catch(()=>{ card.style.borderRadius=r0; card.style.boxShadow=s0; toast("保存できませんでした"); });
+    };
+    if(opts.back) $("backBtn").onclick=()=>showArchive();
+    if(opts.showDone) $("doneBtn").onclick=async()=>{
+      if(!confirm("この記事を完了にして、次の種に進みます。\nnote本文のコピーと、カードの保存は済みましたか？（完了にしても「これまでの記事」からいつでも見られます）")) return;
+      try { await updateDoc(current.ref,{status:"done"}); toast("完了にしました"); showCurrent(); }
+      catch(e){ toast("できませんでした"); }
+    };
+    showArticle(arts[start]);
+    $("count").textContent = opts.count || "読んで、本文コピーとカードの仕上げをしてください";
+    $("action").style.display=""; $("action").disabled=false; $("action").textContent="カードを保存";
+    $("action").onclick=async()=>{ const idx=arts.findIndex(a=>a===activeArticle);
       arts[idx].card={quote:$("igQuote").textContent,sig:$("edSig").value,rich:currentColor,leaf:$("edLeaf").checked};
-      await updateDoc(current.ref,{articles:arts,status:"ready"});
-      $("content").innerHTML=`<div class="state"><div class="big">仕上げました</div>note本文はコピー済みのものを貼り付け、公開ボタンを押してください。<br>カードは投稿予約されました。</div>`;
-      $("count").textContent=""; $("action").style.display="none"; };
+      try { await updateDoc(current.ref,{articles:arts}); toast("カードを保存しました"); }
+      catch(e){ toast("保存できませんでした"); }
+    };
+  }
+  function renderArticles(){
+    const arts = current.data.articles || [];
+    if(!arts.length) return renderEmpty();
+    buildArticleUI(arts,{intro:`<p class="lede">個人名を消して、あなたの教育観と文体で記事にしました。note本文をコピーし、カードを仕上げてください。<b>操作しても記事は消えません。</b></p>`,showDone:true});
+  }
+  async function renderArchiveList(){
+    $("bar").style.display="none";
+    $("content").innerHTML=`<div class="state"><div class="big">読み込み中…</div></div>`;
+    try{
+      const qy=query(collection(dbf,COLLECTION),orderBy("createdAt","desc"),limit(60));
+      const snap=await getDocs(qy); const rows=[];
+      snap.forEach(d=>{ const data=d.data(); if(data.articles&&data.articles.length) rows.push({ref:d.ref,data}); });
+      archiveRows=rows;
+      if(!rows.length){ $("content").innerHTML=`<div class="state"><div class="big">まだ記事がありません</div>記事を書くと、ここにたまっていきます。</div>`; return; }
+      let html=`<p class="lede">これまでに書いた記事とカードです。タップすると開いて、読み直し・本文コピー・カードの手直しができます。</p>`;
+      rows.forEach((r,ri)=>{ const dt=(r.data.createdAt&&r.data.createdAt.toDate)?r.data.createdAt.toDate():null;
+        const label=dt?dt.toLocaleDateString("ja-JP",{year:"numeric",month:"long",day:"numeric"}):"";
+        r.data.articles.forEach((a,ai)=>{ html+=`<div class="topic arch" data-r="${ri}" data-a="${ai}"><div class="t-head"><span class="title">${esc(a.title)}</span></div><p class="summary">${esc(label)}</p></div>`; });
+      });
+      $("content").innerHTML=html;
+      document.querySelectorAll(".topic.arch").forEach(el=>{ el.onclick=()=>renderArchiveArticle(archiveRows[+el.dataset.r],+el.dataset.a); });
+    }catch(e){ $("content").innerHTML=`<div class="state"><div class="big">読み込めませんでした</div><small>${esc(e.message)}</small></div>`; }
+  }
+  function renderArchiveArticle(r,startIdx){
+    current=r;
+    buildArticleUI(r.data.articles,{intro:`<p class="lede">保存した記事とカードです。言葉を直したら「カードを保存」で上書きできます。</p>`,showDone:false,back:true,start:startIdx,count:"読み直し・本文コピー・カードの手直しができます"});
   }
   let activeArticle=null,currentColor="濃";
   function showArticle(a){ activeArticle=a;
     $("article").innerHTML=`<h2>${esc(a.title)}</h2>`+a.markdown.split("\n").slice(1).filter(Boolean).map(p=>`<p>${esc(p.replace(/^#+\s*/,""))}</p>`).join("");
-    setColor(a.rich||"濃"); const qp=$("qpList"); qp.innerHTML="";
+    setColor((a.card&&a.card.rich)||a.rich||"濃"); const qp=$("qpList"); qp.innerHTML="";
     (a.quotes||[]).forEach((q,i)=>{ const b=document.createElement("button"); b.className="qp"+(i===0?" active":""); b.textContent=q;
       b.onclick=()=>{$("edText").value=q;setQuote(q);[...qp.children].forEach(x=>x.classList.remove("active"));b.classList.add("active");}; qp.appendChild(b); });
     const first=(a.card&&a.card.quote)||(a.quotes&&a.quotes[0])||""; $("edText").value=first; setQuote(first);
-    $("edSig").value=(a.card&&a.card.sig)||"日々のリフレクションより"; $("igSig").textContent=$("edSig").value; }
+    $("edSig").value=(a.card&&a.card.sig)||"日々のリフレクションより"; $("igSig").textContent=$("edSig").value;
+    const showCots=!(a.card&&a.card.leaf===false); if($("edLeaf")) $("edLeaf").checked=showCots; if($("igCots")) $("igCots").style.display=showCots?"":"none"; }
   function setQuote(q,noText){ const el=$("igQuote"); if(!noText) el.textContent=q; const n=(q||"").length; el.style.fontSize=n<=12?"26px":n<=22?"21px":n<=34?"18px":"16px"; }
   function setColor(k){ const c=RICH_COLOR[k]||RICH_COLOR["濃"]; currentColor=k; const card=$("igCard");
     card.style.setProperty("--accent",c.accent); card.style.setProperty("--accent-soft",c.soft);
+    const art=$("igArt"); if(art) art.style.color=c.accent;
     document.querySelectorAll(".sw").forEach(s=>s.classList.toggle("active",s.dataset.key===k)); }
   function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
   function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400);}
